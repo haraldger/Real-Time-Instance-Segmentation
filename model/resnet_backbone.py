@@ -111,7 +111,7 @@ class ResNet(nn.Module):
         c5 = self.layer4(c4)
 
         # Return learned features at different scales
-        return [c1, c2, c3, c4, c5]
+        return [c2, c3, c4, c5]
 
         
     
