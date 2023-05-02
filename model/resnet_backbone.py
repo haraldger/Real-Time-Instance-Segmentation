@@ -100,18 +100,18 @@ class ResNet(nn.Module):
         
     def forward(self, x):
         # Initial convolutional layer
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.maxpool(out)
+        c1 = self.conv1(x)
+        c1 = self.bn1(c1)
+        c1 = self.maxpool(c1)
 
         # ResNet layers
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
+        c2 = self.layer1(c1)
+        c3 = self.layer2(c2)
+        c4 = self.layer3(c3)
+        c5 = self.layer4(c4)
 
-        # Return learned features
-        return out
+        # Return learned features at different scales
+        return [c1, c2, c3, c4, c5]
 
         
     
@@ -154,31 +154,72 @@ def test_network_and_output_shapes():
     x = torch.randn(2, 3, 224, 224)
     y = net(x)
     print(f'ResNet18 network = {net}')
-    print(f'ResNet18 output shape = {y.shape}')
+    print(f'ResNet18 output shape = {y[-1].shape}')
 
     net = resnet34()
     y = net(x)
     print(f'ResNet34 network = {net}')
-    print(f'ResNet34 output shape = {y.shape}')
+    print(f'ResNet34 output shape = {y[-1].shape}')
 
     net = resnet50()
     y = net(x)
     print(f'ResNet50 network = {net}')
-    print(f'ResNet50 output shape = {y.shape}')
+    print(f'ResNet50 output shape = {y[-1].shape}')
 
     net = resnet101()
     y = net(x)
     print(f'ResNet101 network = {net}')
-    print(f'ResNet101 output shape = {y.shape}')
+    print(f'ResNet101 output shape = {y[-1].shape}')
 
     net = resnet152()
     y = net(x)
     print(f'ResNet152 network = {net}')
-    print(f'ResNet152 output shape = {y.shape}')
+    print(f'ResNet152 output shape = {y[-1].shape}')
+
+def test_intermediate_output_shapes():
+    net = resnet18()
+    x = torch.randn(2, 3, 224, 224)
+    y = net(x)
+    print(f'ResNet18 C1 output shape = {y[0].shape}') 
+    print(f'ResNet18 C2 output shape = {y[1].shape}')
+    print(f'ResNet18 C3 output shape = {y[2].shape}')
+    print(f'ResNet18 C4 output shape = {y[3].shape}')
+    print(f'ResNet18 C5 output shape = {y[4].shape}')
+
+    net = resnet34()
+    y = net(x)
+    print(f'ResNet34 C1 output shape = {y[0].shape}')
+    print(f'ResNet34 C2 output shape = {y[1].shape}')
+    print(f'ResNet34 C3 output shape = {y[2].shape}')
+    print(f'ResNet34 C4 output shape = {y[3].shape}')
+    print(f'ResNet34 C5 output shape = {y[4].shape}')
+
+    net = resnet50()
+    y = net(x)
+    print(f'ResNet50 C1 output shape = {y[0].shape}')
+    print(f'ResNet50 C2 output shape = {y[1].shape}')
+    print(f'ResNet50 C3 output shape = {y[2].shape}')
+    print(f'ResNet50 C4 output shape = {y[3].shape}')
+    print(f'ResNet50 C5 output shape = {y[4].shape}')
+
+    net = resnet101()
+    y = net(x)
+    print(f'ResNet101 C1 output shape = {y[0].shape}')
+    print(f'ResNet101 C2 output shape = {y[1].shape}')
+    print(f'ResNet101 C3 output shape = {y[2].shape}')
+    print(f'ResNet101 C4 output shape = {y[3].shape}')
+    print(f'ResNet101 C5 output shape = {y[4].shape}')
+
+    net = resnet152()
+    y = net(x)
+    print(f'ResNet152 C1 output shape = {y[0].shape}')
+    print(f'ResNet152 C2 output shape = {y[1].shape}')
+    print(f'ResNet152 C3 output shape = {y[2].shape}')
+    print(f'ResNet152 C4 output shape = {y[3].shape}')
+    print(f'ResNet152 C5 output shape = {y[4].shape}')
 
 
-def main():
+
+def run_tests():
     test_network_and_output_shapes()
-
-if __name__ == '__main__':
-    main()
+    test_intermediate_output_shapes()
