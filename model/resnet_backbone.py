@@ -181,6 +181,8 @@ def test_network_and_output_shapes():
     print(f'Length of output = {len(y)}')
     assert len(y) == 3
 
+    print('Test passed!')
+
 def test_intermediate_output_shapes():
     net = resnet18()
     x = torch.randn(2, 3, 550, 550)
@@ -227,6 +229,8 @@ def test_intermediate_output_shapes():
     assert y[1].shape == torch.Size([2, 256, 35, 35])
     print(f'ResNet152 C5 output shape = {y[2].shape}')
     assert y[2].shape == torch.Size([2, 512, 18, 18])
+
+    print('Test passed!')
 
 
 
