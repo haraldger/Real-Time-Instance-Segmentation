@@ -2,8 +2,7 @@ import torch.nn.functional as F
 import numpy as np
 import torch
 from torch import nn
-import numpy as np
-from torch import nn
+
 class InterpolateModule(nn.Module):
 	"""
 	This is a module version of F.interpolate (rip nn.Upsampling).
