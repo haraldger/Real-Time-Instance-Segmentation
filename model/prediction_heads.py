@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 class PredictionHeads(nn.Module):
-    def __init__(self, in_channels, num_heads=5, num_anchors=3, num_classes=2, num_masks=32) -> None:
+    def __init__(self, in_channels=256, num_heads=5, num_anchors=3, num_classes=2, num_masks=32) -> None:
         super().__init__()
 
         self.num_anchors = num_anchors
