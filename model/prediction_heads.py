@@ -18,9 +18,10 @@ class PredictionHeads(nn.Module):
         for _ in range(self.num_heads):
             self.conv_layers.append(nn.Sequential(
                 nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(),
                 nn.BatchNorm2d(in_channels),
+                nn.ReLU(),
                 nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding=1),
+                nn.BatchNorm2d(in_channels),
                 nn.ReLU()
             ))
             self.cls_layers.append(nn.Conv2d(in_channels, num_anchors*num_classes, kernel_size=3, stride=1, padding=1))
