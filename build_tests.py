@@ -1,4 +1,4 @@
-from model import resnet_backbone, fpn,protonet
+from model import resnet_backbone, fpn, protonet
 
 def main():
     resnet_backbone.run_tests()
