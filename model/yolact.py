@@ -6,11 +6,12 @@ from . import prediction_heads, resnet_backbone, fpn, protonet
 from utils import fast_nms
 
 class Yolact(nn.Module):
-    def __init__(self, backbone=None, num_classes=2, num_masks=32):
+    def __init__(self, backbone=None, num_classes=1, num_masks=32, top_k=100):
         super().__init__()
 
         self.num_classes = num_classes
         self.num_masks = num_masks
+        self.top_k = top_k
 
         # Network components
         if backbone is None:
@@ -32,29 +33,33 @@ class Yolact(nn.Module):
             cls_preds[idx] = cls_preds[idx].permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, self.num_classes)
             reg_preds[idx] = reg_preds[idx].permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 4)
             mask_coefficients[idx] = mask_coefficients[idx].permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, self.num_masks)
-        
+
+
         cls = torch.cat(cls_preds, dim=1)
         reg = torch.cat(reg_preds, dim=1)
         mask_coefficients = torch.cat(mask_coefficients, dim=1)
 
+
         # Sort according to confidence
         _, sort_idx = torch.sort(cls, dim=1, descending=True)
-        cls = torch.gather(cls, 1, sort_idx)
-        reg = torch.gather(reg, 1, sort_idx)
-        mask_coefficients = torch.gather(mask_coefficients, 1, sort_idx)
+        sort_idx = sort_idx[:, :self.top_k]    # Top 100 predictions
+        cls = torch.gather(cls, 1, sort_idx.expand(-1, -1, cls.shape[-1]))
+        reg = torch.gather(reg, 1, sort_idx.expand(-1, -1, reg.shape[-1]))
+        mask_coefficients = torch.gather(mask_coefficients, 1, sort_idx.expand(-1, -1, mask_coefficients.shape[-1]))
 
         bboxes, classes, coefficients, columns_to_keep = fast_nms.batched_fnms(reg, cls, mask_coefficients, threshold=0.75)
+
 
         # ProtoNet
         proto_out = self.protonet(p_outputs[0])
         proto_out = proto_out.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, self.num_masks)
-        proto_out = torch.gather(proto_out, 1, sort_idx)
 
         # Matrix multiplication of coefficients and proto_out -> final masks
-        coefficients = torch.transpose(coefficients, -1, -2)
+        print(f'coefficients.shape: {coefficients.shape}')
+        coefficients = torch.transpose(coefficients, -1, -2)       
         masks = torch.matmul(proto_out, coefficients)
         masks = F.sigmoid(masks)
-        masks = masks.permute(0, 2, 1).contiguous().view(x.shape[0], self.num_masks, 138, 138)
+        masks = masks.view(x.shape[0], -1, 138, 138)
 
         return bboxes, classes, masks, columns_to_keep
     

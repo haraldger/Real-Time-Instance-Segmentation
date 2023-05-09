@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 class PredictionHeads(nn.Module):
-    def __init__(self, in_channels=256, num_heads=5, num_anchors=3, num_classes=2, num_masks=32) -> None:
+    def __init__(self, in_channels=256, num_heads=5, num_anchors=3, num_classes=1, num_masks=32) -> None:
         super().__init__()
 
         self.num_anchors = num_anchors
@@ -28,7 +28,7 @@ class PredictionHeads(nn.Module):
             self.bbox_layers.append(nn.Conv2d(in_channels, num_anchors*4, kernel_size=3, stride=1, padding=1))
             self.mask_layers.append(nn.Conv2d(in_channels, num_anchors*num_masks, kernel_size=3, stride=1, padding=1))
 
-        self.softmax = nn.Softmax(dim=1)  # For classification
+        self.sigmoid = nn.Sigmoid()  # For classification/confidence
         self.tanh = nn.Tanh()   # For mask
 
     def forward(self, x):
@@ -48,7 +48,7 @@ class PredictionHeads(nn.Module):
         bbox = list()
         mask_coefficients = list()
         for i, feature in enumerate(out):
-            cls.append(self.softmax(self.cls_layers[i](feature)))
+            cls.append(self.sigmoid(self.cls_layers[i](feature)))
             bbox.append(self.bbox_layers[i](feature))
             mask_coefficients.append(self.tanh(self.mask_layers[i](feature)))
 
@@ -94,13 +94,14 @@ def test_output_shapes():
 
     for i in range(len(cls)):
         print(f"cls[{i}].shape: {cls[i].shape}")
-        assert cls[i].shape == (2, 3*2, ceil(69/(2**i)), ceil(69/(2**i)))
+        assert cls[i].shape == (2, 3, ceil(69/(2**i)), ceil(69/(2**i)))
         print(f"bbox[{i}].shape: {bbox[i].shape}")
         assert bbox[i].shape == (2, 3*4, ceil(69/(2**i)), ceil(69/(2**i)))
         print(f"mask_coefficients[{i}].shape: {mask_coefficients[i].shape}")
         assert mask_coefficients[i].shape == (2, 3*32, ceil(69/(2**i)), ceil(69/(2**i)))
 
     print("Test passed!")
+    print()
 
 def run_tests():
     test_network_and_outputs()
