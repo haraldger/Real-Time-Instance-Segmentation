@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from . import prediction_heads, resnet_backbone, fpn, protonet
+from utils import fast_nms
 
 class Yolact(nn.Module):
     def __init__(self, backbone=None, num_classes=2, num_masks=32):
@@ -42,12 +43,44 @@ class Yolact(nn.Module):
         reg = torch.gather(reg, 1, sort_idx)
         mask_coefficients = torch.gather(mask_coefficients, 1, sort_idx)
 
-        
+        bboxes, classes, coefficients, columns_to_keep = fast_nms.batched_fnms(reg, cls, mask_coefficients, threshold=0.75)
 
         # ProtoNet
         proto_out = self.protonet(p_outputs[0])
+        proto_out = proto_out.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, self.num_masks)
+        proto_out = torch.gather(proto_out, 1, sort_idx)
 
-        return torch.randn(2, 256, 69, 69)
+        # Matrix multiplication of coefficients and proto_out -> final masks
+        coefficients = torch.transpose(coefficients, -1, -2)
+        masks = torch.matmul(proto_out, coefficients)
+        masks = F.sigmoid(masks)
+        masks = masks.permute(0, 2, 1).contiguous().view(x.shape[0], self.num_masks, 138, 138)
+
+        return bboxes, classes, masks, columns_to_keep
+    
+
+    def evaluate(self, x):
+        if len(x.shape) == 3:
+            x = x.unsqueeze(0)      # Add batch dimension, even if batch size is 1
+
+        bboxes, classes, masks, columns_to_keep = self.forward(x)
+        """
+        bboxes: tensor of shape (batch_size, num_bboxes, 4)
+        classes: tensor of shape (batch_size, num_bboxes) - contains class confidence scores
+        masks: tensor of shape (batch_size, num_masks, 138, 138)
+        """
+
+        # Crop masks with predicted bounding boxes
+        cropped_masks = []
+        for i in range(len(bboxes)):
+            cropped_masks.append([])
+            for j in range(len(bboxes[i])):
+                bbox = bboxes[i][j]
+                mask = masks[i][j]
+                cropped_masks[i].append(mask[bbox[1]:bbox[3], bbox[0]:bbox[2]])
+
+        return bboxes, classes, cropped_masks, columns_to_keep
+
         
 
 
@@ -57,7 +90,7 @@ class Yolact(nn.Module):
 def test_yolact_forward():
     x = torch.randn(2, 3, 550, 550)
     model = Yolact()
-    y = model(x)
+    bboxes, classes, masks, columns_to_keep = model.forward(x)
 
     # TODO: Implement meaningful test with assertions
 
