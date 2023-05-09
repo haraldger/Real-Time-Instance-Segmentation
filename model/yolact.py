@@ -36,7 +36,13 @@ class Yolact(nn.Module):
         reg = torch.cat(reg_preds, dim=1)
         mask_coefficients = torch.cat(mask_coefficients, dim=1)
 
-        # TODO: Perform Fast NMS
+        # Sort according to confidence
+        _, sort_idx = torch.sort(cls, dim=1, descending=True)
+        cls = torch.gather(cls, 1, sort_idx)
+        reg = torch.gather(reg, 1, sort_idx)
+        mask_coefficients = torch.gather(mask_coefficients, 1, sort_idx)
+
+        
 
         # ProtoNet
         proto_out = self.protonet(p_outputs[0])
