@@ -55,7 +55,6 @@ class Yolact(nn.Module):
         proto_out = proto_out.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, self.num_masks)
 
         # Matrix multiplication of coefficients and proto_out -> final masks
-        print(f'coefficients.shape: {coefficients.shape}')
         coefficients = torch.transpose(coefficients, -1, -2)       
         masks = torch.matmul(proto_out, coefficients)
         masks = F.sigmoid(masks)
@@ -93,11 +92,26 @@ class Yolact(nn.Module):
 # testing
 
 def test_yolact_forward():
+    print("Running Yolact forward test...")
+
     x = torch.randn(2, 3, 550, 550)
     model = Yolact()
     bboxes, classes, masks, columns_to_keep = model.forward(x)
 
-    # TODO: Implement meaningful test with assertions
+    print(f'bboxes.shape: {bboxes.shape}')
+    assert bboxes.shape == (2, 100, 4)
+
+    print(f'classes.shape: {classes.shape}')
+    assert classes.shape == (2, 100, 1)
+
+    print(f'masks.shape: {masks.shape}')
+    assert masks.shape == (2, 100, 138, 138)
+
+    print(f'columns_to_keep.shape: {columns_to_keep.shape}')
+    assert columns_to_keep.shape == (2, 100)
+
+    print("Yolact forward test successful!")
+
 
 def run_tests():
     test_yolact_forward()
