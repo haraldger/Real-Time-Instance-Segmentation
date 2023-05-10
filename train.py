@@ -71,14 +71,14 @@ def train():
     val_data_dir = "data/coco_holds_resized"
     val_annotations = "data/coco_holds_resized/annotations.json"
 
-    data_transforms = transforms.Compose([
+    # data_transforms = transforms.Compose([
         # transforms.Resize((550, 550)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    #     transforms.ToTensor(),
+    #     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    # ])
 
-    train_dataset = CocoDetection(root=train_data_dir, annFile=train_annotations, transforms=data_transforms)
-    val_dataset = CocoDetection(root=val_data_dir, annFile=val_annotations, transforms=data_transforms)
+    train_dataset = CocoDetection(root=train_data_dir, annFile=train_annotations)
+    val_dataset = CocoDetection(root=val_data_dir, annFile=val_annotations)
 
     train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=1, collate_fn=custom_collate)
     val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False, num_workers=1, collate_fn=custom_collate)
