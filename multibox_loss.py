@@ -47,12 +47,17 @@ class MultiboxLoss(nn.Module):
         dst_loss = 0
         mask_loss = 0
         for batch in range(confidence.shape[0]):
+            # Filter out -1s
+            filtered_idx_pred = idx_pred[batch][idx_pred[batch] != -1]
+            filtered_idx_gt = idx_gt[batch][idx_gt[batch] != -1]
+
             # Compute losses
-            cls_loss += self.cross_entropy(confidence[batch][idx_pred[batch]], gt_labels[batch][idx_gt[batch]])
-            dst_loss += self.smooth_l1(predicted_locations[batch][idx_pred[batch]], gt_locations[batch][idx_gt[batch]])
+            cls_loss += self.cross_entropy(confidence[batch][filtered_idx_pred], gt_labels[batch][filtered_idx_gt])
+            dst_loss += self.smooth_l1(predicted_locations[batch][filtered_idx_pred], gt_locations[batch][filtered_idx_gt])
+            
             # Mask loss uses pixel-wise cross entropy
-            mask_preds = predicted_masks[batch][idx_pred[batch]].view(-1, 1)            # (top_k*138*138, 1)
-            mask_gt = gt_masks[batch][idx_gt[batch]].view(-1, 1)                        # (top_k*138*138, 1)
+            mask_preds = predicted_masks[batch][filtered_idx_pred].view(-1, 1)      # (top_k*138*138, 1)
+            mask_gt = gt_masks[batch][filtered_idx_gt].view(-1, 1)                  # (top_k*138*138, 1)
             mask_loss += self.cross_entropy(mask_preds, mask_gt)
 
         # Normalize losses
@@ -167,11 +172,13 @@ def setup_data():
 
     return pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects
 
-def test_match_predictions_same_size():
+def test_loss_forward():
+    print("Running MultiboxLoss forward test...")
     pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects = setup_data()
     loss = MultiboxLoss()
     loss_value = loss(pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects)
     print(loss_value)
+    print()
 
 def run_tests():
-    test_match_predictions_same_size()
+    test_loss_forward()
