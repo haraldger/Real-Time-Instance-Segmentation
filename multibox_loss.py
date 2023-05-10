@@ -138,16 +138,16 @@ def setup_data():
     pred_mask = torch.rand((2, 5, 138, 138))
 
 
-    gt_label = torch.tensor([[[1],
-                                [1],
-                                [1],
-                                [0],
-                                [0]],
-                                [[1],
-                                [1],
-                                [0],
-                                [0],
-                                [0]]])
+    gt_label = torch.tensor([[[1.],
+                                [1.],
+                                [1.],
+                                [0.],
+                                [0.]],
+                                [[1.],
+                                [1.],
+                                [0.],
+                                [0.],
+                                [0.]]])
 
     gt_bbox = torch.tensor([[[0.11, 0.11, 0.21, 0.21],
                                 [0.11, 0.11, 0.21, 0.21],
@@ -170,7 +170,8 @@ def setup_data():
 def test_match_predictions_same_size():
     pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects = setup_data()
     loss = MultiboxLoss()
-    loss(pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects)
+    loss_value = loss(pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects)
+    print(loss_value)
 
 def run_tests():
     test_match_predictions_same_size()
