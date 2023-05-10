@@ -190,6 +190,7 @@ def test_batched_fast_nms():
     assert torch.all(torch.eq(masked_columns, expected_masked_columns))
 
     print("batched_fast_nms test passed!")
+    print()
 
 
 
