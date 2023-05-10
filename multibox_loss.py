@@ -57,13 +57,13 @@ class MultiboxLoss(nn.Module):
             
             # Mask loss uses pixel-wise cross entropy
             mask_preds = predicted_masks[batch][filtered_idx_pred].view(-1, 1)      # (top_k*138*138, 1)
-            mask_gt = gt_masks[batch][filtered_idx_gt].view(-1, 1)                  # (top_k*138*138, 1)
-            mask_loss += self.cross_entropy(mask_preds, mask_gt)
+            # mask_gt = gt_masks[batch][filtered_idx_gt].view(-1, 1)                  # (top_k*138*138, 1)
+            # mask_loss += self.cross_entropy(mask_preds, mask_gt)
 
         # Normalize losses
         cls_loss /= confidence.shape[0]
         dst_loss /= confidence.shape[0]
-        mask_loss /= confidence.shape[0]
+        # mask_loss /= confidence.shape[0]
 
         loss = self.cls_coef * cls_loss + self.dst_coef * dst_loss + self.mask_coef * mask_loss
         return loss
