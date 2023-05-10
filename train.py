@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from torchvision.datasets import CocoDetection
+from torchvision.datasets import VisionDataset
 import torchvision.transforms as transforms
 from model.yolact import Yolact
 from multibox_loss import MultiboxLoss
@@ -10,11 +10,76 @@ import numpy as np
 from pycocotools import mask as maskUtils
 import torch
 from pycocotools import mask as coco_mask
+from typing import Any, Callable, List, Optional, Tuple
+from PIL import Image
+import os
+
+class CocoDetection(VisionDataset):
+    """`MS Coco Detection <https://cocodataset.org/#detection-2016>`_ Dataset.
+
+    It requires the `COCO API to be installed <https://github.com/pdollar/coco/tree/master/PythonAPI>`_.
+
+    Args:
+        root (string): Root directory where images are downloaded to.
+        annFile (string): Path to json annotation file.
+        transform (callable, optional): A function/transform that  takes in an PIL image
+            and returns a transformed version. E.g, ``transforms.PILToTensor``
+        target_transform (callable, optional): A function/transform that takes in the
+            target and transforms it.
+        transforms (callable, optional): A function/transform that takes input sample and its target as entry
+            and returns a transformed version.
+    """
+
+    def __init__(
+        self,
+        root: str,
+        annFile: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        transforms: Optional[Callable] = None,
+    ) -> None:
+        super().__init__(root, transforms, transform, target_transform)
+        from pycocotools.coco import COCO
+
+        self.coco = COCO(annFile)
+        self.ids = list(sorted(self.coco.imgs.keys()))
+
+    def _load_image(self, id: int) -> Image.Image:
+        path = self.coco.loadImgs(id)[0]["file_name"]
+        return Image.open(os.path.join(self.root, path)).convert("RGB")
+
+    def _load_target(self, id: int) -> List[Any]:
+        return self.coco.loadAnns(self.coco.getAnnIds(id))
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        id = self.ids[index]
+        image = self._load_image(id)
+        target = self._load_target(id)
+
+        if self.transforms is not None:
+            image, target = self.transforms(image, target)
+
+        width, height = image.size
+
+        masks = [self.coco.annToMask(obj).reshape(-1) for obj in target]
+        masks = np.vstack(masks)
+        masks = masks.reshape(-1, height, width)
+        # Masks should always have 100 as first dimension, either pad or drop
+        if masks.shape[0] < 100:
+            masks = np.pad(masks, ((0, 100 - masks.shape[0]), (0, 0), (0, 0)), mode='constant')
+        elif masks.shape[0] > 100:
+            masks = masks[:100, :, :]
+        masks = torch.tensor(masks, dtype=torch.uint8)
+
+        return image, target, masks
+
+    def __len__(self) -> int:
+        return len(self.ids)
 
 def transform_targets(targets, batch_size, k, mask_size):
     gt_labels = torch.zeros((batch_size, k), dtype=torch.long) # TODO different dimension than expected in multibox loss?
     gt_locations = torch.zeros((batch_size, k, 4), dtype=torch.float32)
-    gt_masks = torch.zeros((batch_size, k, mask_size, mask_size), dtype=torch.float32)
+    # gt_masks = torch.zeros((batch_size, k, mask_size, mask_size), dtype=torch.float32)
     num_objects = torch.zeros((batch_size, 1), dtype=torch.long)
 
     for batch_idx, target in enumerate(targets):
@@ -33,18 +98,21 @@ def transform_targets(targets, batch_size, k, mask_size):
             # Masks
             # rle = coco_mask.frPyObjects(annotation["segmentation"], bbox[3], bbox[2])
             # mask = coco_mask.decode(rle)
-            # mask_resized = torch.tensor(mask, dtype=torch.float32).unsqueeze
+            # print('type mask', type(mask))
+            # mask_resized = torch.tensor(mask, dtype=torch.float32)#.unsqueeze
+            # print('shape mask', mask_resized.shape)
             # mask_resized = torch.nn.functional.interpolate(mask_resized.unsqueeze(0), size=(mask_size, mask_size), mode='bilinear', align_corners=False)
             # mask_resized = (mask_resized > 0.5).float().squeeze(0)
             # gt_masks[batch_idx, idx, :, :] = mask_resized
 
-    return gt_labels, gt_locations, gt_masks, num_objects
+    return gt_labels, gt_locations, num_objects
 
 
 
 def custom_collate(batch):
     images = [item[0] for item in batch]
     targets = [item[1] for item in batch]
+    masks = [item[2] for item in batch]
 
     images = [to_tensor(img) for img in images]
 
@@ -58,8 +126,9 @@ def custom_collate(batch):
         padded_img = torch.nn.functional.pad(img, (0, pad_width, 0, pad_height))
         padded_images.append(padded_img)
     images = torch.stack(padded_images)
+    masks = torch.stack(masks)
 
-    return images, targets
+    return images, targets, masks
 
 
 
@@ -94,9 +163,9 @@ def train():
         print(f"Epoch {epoch + 1}/{num_epochs}")
         yolact.train()
         running_loss = 0.0
-        for i, (images, targets) in enumerate(train_loader):
+        for i, (images, targets, gt_masks) in enumerate(train_loader):
             images = images.to(device)
-            gt_labels, gt_locations, gt_masks, num_objects = transform_targets(targets, 2, 100, 138)
+            gt_labels, gt_locations, num_objects = transform_targets(targets, 2, 100, 138)
 
             optimizer.zero_grad()
 
