@@ -90,6 +90,7 @@ class MultiboxLoss(nn.Module):
         bbox_preds = bbox_preds.detach().cpu()
         gt_bboxes = gt_bboxes.detach().cpu()
         gt_labels = gt_labels.detach().cpu()
+        detections_to_keep = detections_to_keep.detach().cpu()
         num_objects = num_objects.detach().cpu()
 
         idx_preds = torch.full((cls_preds.shape[0], cls_preds.shape[1]), fill_value=-1)
@@ -103,7 +104,7 @@ class MultiboxLoss(nn.Module):
             
             # Filter out detections that did not survive NMS
             cls_preds_batch = cls_preds_batch[detections_to_keep[batch] == 1]          # Remove zeros -> (detections_to_keep)
-            bbox_preds_batch = bbox_preds_batch[detections_to_keep[batch]==  1]        # Remove zeros -> (detections_to_keep, 4)
+            bbox_preds_batch = bbox_preds_batch[detections_to_keep[batch] ==  1]        # Remove zeros -> (detections_to_keep, 4)
 
             # Filter out padded zeros
             gt_labels_batch = gt_labels_batch[:num_objects[batch]]                 # Remove zeros -> (num_objects)
