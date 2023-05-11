@@ -136,6 +136,7 @@ def custom_collate(batch):
 
 def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum=0.9, weight_decay=0.0005):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using {device}")
 
     train_data_dir = "data/coco_holds_resized"
     train_annotations = "data/coco_holds_resized/annotations.json"
