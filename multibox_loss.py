@@ -124,6 +124,7 @@ class MultiboxLoss(nn.Module):
 # Tests
 
 def setup_data():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     pred_cls = torch.tensor([[[0.95],   
                                 [0.05],
                                 [0.05],
@@ -133,7 +134,7 @@ def setup_data():
                                 [0.95],
                                 [0.05],
                                 [0.25],
-                                [0.25]]])
+                                [0.25]]]).to(device)
     pred_bbox = torch.tensor([[[0.1, 0.1, 0.2, 0.2],
                                 [0.1, 0.1, 0.2, 0.2],
                                 [0.1, 0.1, 0.2, 0.2],
@@ -143,8 +144,8 @@ def setup_data():
                                 [0.1, 0.1, 0.2, 0.2],
                                 [0.1, 0.1, 0.2, 0.2],
                                 [0.1, 0.1, 0.2, 0.2],
-                                [0.1, 0.1, 0.2, 0.2]]])
-    pred_mask = torch.rand((2, 5, 138, 138))
+                                [0.1, 0.1, 0.2, 0.2]]]).to(device)
+    pred_mask = torch.rand((2, 5, 138, 138)).to(device)
 
 
     gt_label = torch.tensor([[[1.],
@@ -156,7 +157,7 @@ def setup_data():
                                 [1.],
                                 [0.],
                                 [0.],
-                                [0.]]])
+                                [0.]]]).to(device)
 
     gt_bbox = torch.tensor([[[0.11, 0.11, 0.21, 0.21],
                                 [0.11, 0.11, 0.21, 0.21],
@@ -167,12 +168,12 @@ def setup_data():
                                 [0.1, 0.1, 0.2, 0.2],
                                 [0.0, 0.0, 0.0, 0.0],
                                 [0.0, 0.0, 0.0, 0.0],
-                                [0.0, 0.0, 0.0, 0.0]]])
+                                [0.0, 0.0, 0.0, 0.0]]]).to(device)
 
-    gt_masks = torch.rand((2, 5, 138, 138))
+    gt_masks = torch.rand((2, 5, 138, 138)).to(device)
     gt_masks[0, 3:, :, :] = 0
 
-    num_objects = torch.tensor([[3], [2]])
+    num_objects = torch.tensor([[3], [2]]).to(device)
 
     return pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects
 
