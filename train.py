@@ -203,7 +203,7 @@ def train(model, num_epochs=100, batch_size=4, k=100, mask_size=512, lr=0.001, m
                     gt_masks = gt_masks.to(device)
                     
                     bboxes, classes, masks, columns_to_keep = model(images)
-                    loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, num_objects)
+                    loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, columns_to_keep, num_objects)
 
                     validation_loss += loss.item()
 
