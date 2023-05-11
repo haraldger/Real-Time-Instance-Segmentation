@@ -167,6 +167,8 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
         running_loss = 0.0
         for i, (images, targets, gt_masks) in enumerate(train_loader):
             images = images.to(device)
+            targets = targets.to(device)
+            gt_masks = gt_masks.to(device)
             gt_labels, gt_locations, num_objects = transform_targets(targets, batch_size=batch_size, k=k, mask_size=mask_size)
             
             optimizer.zero_grad()

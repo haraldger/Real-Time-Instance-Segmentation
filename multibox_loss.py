@@ -53,7 +53,7 @@ class MultiboxLoss(nn.Module):
 
             # Compute losses
             cls_preds = confidence[batch][filtered_idx_pred].view(-1)
-            cls_gt = gt_labels[batch][filtered_idx_gt].view(-1).to(torch.float)
+            cls_gt = gt_labels[batch][filtered_idx_gt].view(-1).to(dtype=torch.float)
             cls_loss += self.cross_entropy(cls_preds, cls_gt)
             dst_loss += self.smooth_l1(predicted_locations[batch][filtered_idx_pred], gt_locations[batch][filtered_idx_gt])
             
