@@ -278,4 +278,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# PyTorch .pth files
+*.pth
+
 # End of https://www.toptal.com/developers/gitignore/api/venv,git,python,visualstudiocode,macos,windows

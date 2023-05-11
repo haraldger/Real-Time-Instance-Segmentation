@@ -6,12 +6,13 @@ from . import prediction_heads, resnet_backbone, fpn, protonet
 from utils import fast_nms
 
 class Yolact(nn.Module):
-    def __init__(self, backbone=None, num_classes=1, num_masks=32, top_k=100):
+    def __init__(self, backbone=None, num_classes=1, num_masks=32, top_k=100, mask_dim=512):
         super().__init__()
 
         self.num_classes = num_classes
         self.num_masks = num_masks
         self.top_k = top_k
+        self.mask_dim = 512
 
         # Network components
         if backbone is None:
@@ -58,7 +59,7 @@ class Yolact(nn.Module):
         coefficients = torch.transpose(coefficients, -1, -2)       
         masks = torch.matmul(proto_out, coefficients)
         masks = F.sigmoid(masks)
-        masks = masks.view(x.shape[0], -1, 138, 138)
+        masks = masks.view(x.shape[0], -1, self.mask_dim, self.mask_dim)
 
         return bboxes, classes, masks, columns_to_keep
     
@@ -94,7 +95,7 @@ class Yolact(nn.Module):
 def test_yolact_forward():
     print("Running Yolact forward test...")
 
-    x = torch.randn(2, 3, 550, 550)
+    x = torch.randn(2, 3, 512, 512)
     model = Yolact()
     bboxes, classes, masks, columns_to_keep = model.forward(x)
 
@@ -105,7 +106,7 @@ def test_yolact_forward():
     assert classes.shape == (2, 100, 1)
 
     print(f'masks.shape: {masks.shape}')
-    assert masks.shape == (2, 100, 138, 138)
+    assert masks.shape == (2, 100, 512, 512)
 
     print(f'columns_to_keep.shape: {columns_to_keep.shape}')
     assert columns_to_keep.shape == (2, 100)

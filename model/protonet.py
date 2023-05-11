@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 class Protonet(nn.Module):
-    def __init__(self, in_channels=256, hidden_channels=256, proto_dim=138, num_prototypes=32):
+    def __init__(self, in_channels=256, hidden_channels=256, proto_dim=512, num_prototypes=32):
         super(Protonet, self).__init__()
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels
@@ -34,12 +34,12 @@ class Protonet(nn.Module):
 
 #testing
 def test_protonet_forward():
-    x = torch.randn(2, 256, 69, 69)
+    x = torch.randn(2, 256, 64, 64)
     model = Protonet()
     y = model(x)
 
     print(f'Protonet output shape: {y.shape}')
-    assert y.shape == (2, 32, 138, 138)
+    assert y.shape == (2, 32, 512, 512)
 
     print('Test passed!')
 
