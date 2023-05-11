@@ -169,6 +169,8 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
         for i, (images, targets, gt_masks) in enumerate(train_loader):
             if device == 'cuda':
                 print(f'Before cuda to: {torch.cuda.memory_allocated() / 1024 ** 2 }')
+            else:
+                print(device)
             images = images.to(device)
 
             
