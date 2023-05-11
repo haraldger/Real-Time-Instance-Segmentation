@@ -167,10 +167,8 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
         yolact.train()
         running_loss = 0.0
         for i, (images, targets, gt_masks) in enumerate(train_loader):
-            if device == 'cuda':
+            if device == torch.device('cuda'):
                 print(f'Before cuda to: {torch.cuda.memory_allocated() / 1024 ** 2 }')
-            else:
-                print(type(device))
             images = images.to(device)
 
             
@@ -179,7 +177,7 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
             gt_locations = gt_locations.to(device)
             gt_masks = gt_masks.to(device)
 
-            if device == 'cuda':
+            if device == torch.device('cuda'):
                 print(f'After cuda to: {torch.cuda.memory_allocated() / 1024 ** 2 }')
 
             optimizer.zero_grad()
@@ -193,7 +191,7 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
             running_loss += loss.item()
             del images, gt_labels, gt_locations, gt_masks, bboxes, classes, masks, columns_to_keep
 
-            if device == 'cuda':
+            if device == torch.device('cuda'):
                 print(f'After del: {torch.cuda.memory_allocated() / 1024 ** 2 }')
         
         print(f"Training loss: {running_loss / len(train_loader):.4f}")
