@@ -48,7 +48,7 @@ class Yolact(nn.Module):
         reg = torch.gather(reg, 1, sort_idx.expand(-1, -1, reg.shape[-1]))
         mask_coefficients = torch.gather(mask_coefficients, 1, sort_idx.expand(-1, -1, mask_coefficients.shape[-1]))
 
-        bboxes, classes, coefficients, columns_to_keep = fast_nms.batched_fnms(reg, cls, mask_coefficients, threshold=0.75)
+        bboxes, classes, coefficients, masked_columns = fast_nms.batched_fnms(reg, cls, mask_coefficients, threshold=0.75)
 
 
         # ProtoNet
@@ -61,7 +61,7 @@ class Yolact(nn.Module):
         masks = F.sigmoid(masks)
         masks = masks.view(x.shape[0], -1, self.mask_dim, self.mask_dim)
 
-        return bboxes, classes, masks, columns_to_keep
+        return bboxes, classes, masks, masked_columns
     
 
     def evaluate(self, x):

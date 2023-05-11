@@ -24,10 +24,10 @@ def batched_fnms(bboxes, cls, coefficients, threshold=0.75):
     Returns bboxes, cls and coefficients with the same shape as the input, but with the columns
     that have been filtered out masked to 0.
     """
-    masked_columns = torch.zeros(len(bboxes), len(bboxes[0]))
-    filtered_bboxes = torch.zeros_like(bboxes)
-    filtered_cls = torch.zeros_like(cls)
-    filtered_coefficients = torch.zeros_like(coefficients)
+    masked_columns = torch.zeros(len(bboxes), len(bboxes[0]))   # (batch_size, num_bboxes)
+    filtered_bboxes = torch.zeros_like(bboxes)                  # (batch_size, num_bboxes, 4)       
+    filtered_cls = torch.zeros_like(cls)                        # (batch_size, num_bboxes, 1)
+    filtered_coefficients = torch.zeros_like(coefficients)      # (batch_size, num_bboxes, 1)
 
     for i in range(len(bboxes)):
         columns_to_keep = fast_nms(bboxes[i], threshold=threshold)
@@ -37,6 +37,12 @@ def batched_fnms(bboxes, cls, coefficients, threshold=0.75):
         masked_columns[i, columns_to_keep] = 1
 
     return filtered_bboxes, filtered_cls, filtered_coefficients, masked_columns
+    """
+    filtered_bboxes: tensor of shape (batch_size, num_bboxes, 4)
+    filtered_cls: tensor of shape (batch_size, num_bboxes, 1)
+    filtered_coefficients: tensor of shape (batch_size, num_bboxes, 1)
+    masked_columns: tensor of shape (batch_size, num_bboxes) <- columns that have been filtered out are masked to 0
+    """
 
 
 # Tests
