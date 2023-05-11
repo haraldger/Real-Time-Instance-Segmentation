@@ -203,7 +203,7 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
             with torch.no_grad():
                 for i, (images, targets, gt_masks) in enumerate(val_loader):
                     images = images.to(device)
-                    gt_labels, gt_locations, num_objects = transform_targets(targets, 2, 100, 138)
+                    gt_labels, gt_locations, num_objects = transform_targetstargets, batch_size=batch_size, k=k, mask_size=mask_size)
                     gt_labels = gt_labels.to(device)
                     gt_locations = gt_locations.to(device)
                     gt_masks = gt_masks.to(device)
