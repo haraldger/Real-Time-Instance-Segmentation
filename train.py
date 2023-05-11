@@ -167,12 +167,18 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
         yolact.train()
         running_loss = 0.0
         for i, (images, targets, gt_masks) in enumerate(train_loader):
+            if device == 'cuda':
+                print(f'Before cuda to: {torch.cuda.memory_allocated() / 1024 ** 2 }')
             images = images.to(device)
+
             
             gt_labels, gt_locations, num_objects = transform_targets(targets, batch_size=batch_size, k=k, mask_size=mask_size)
             gt_labels = gt_labels.to(device)
             gt_locations = gt_locations.to(device)
             gt_masks = gt_masks.to(device)
+
+            if device == 'cuda':
+                print(f'After cuda to: {torch.cuda.memory_allocated() / 1024 ** 2 }')
 
             optimizer.zero_grad()
 
@@ -184,6 +190,9 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
 
             running_loss += loss.item()
             del images, gt_labels, gt_locations, gt_masks, bboxes, classes, masks, columns_to_keep
+
+            if device == 'cuda':
+                print(f'After del: {torch.cuda.memory_allocated() / 1024 ** 2 }')
         
         print(f"Training loss: {running_loss / len(train_loader):.4f}")
         losses.append(running_loss)
@@ -193,23 +202,19 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
             validation_loss = 0.0
             with torch.no_grad():
                 for i, (images, targets, gt_masks) in enumerate(val_loader):
-
-                    if device == 'cuda':
-                        print(f'Before cuda to: {torch.cuda.memory_allocated() / 1024 ** 2 }')
-
                     images = images.to(device)
                     gt_labels, gt_locations, num_objects = transform_targets(targets, 2, 100, 138)
-                    if device == 'cuda':
-                        print(f'After cuda to: {torch.cuda.memory_allocated() / 1024 ** 2 }')
-
+                    gt_labels = gt_labels.to(device)
+                    gt_locations = gt_locations.to(device)
+                    gt_masks = gt_masks.to(device)
+                    
                     bboxes, classes, masks, columns_to_keep = yolact(images)
                     loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, num_objects)
 
                     validation_loss += loss.item()
 
                     del images, gt_labels, gt_locations, gt_masks, bboxes, classes, masks, columns_to_keep
-                    if device == 'cuda':
-                        print(f'After del: {torch.cuda.memory_allocated() / 1024 ** 2 }')
+                    
 
             print(f"Validation loss: {validation_loss / len(val_loader):.4f}")
 
