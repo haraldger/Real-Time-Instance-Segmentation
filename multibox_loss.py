@@ -27,10 +27,10 @@ class MultiboxLoss(nn.Module):
         """
         confidence (batch_size, top_k, 1): class predictions
         predicted_locations (batch_size, top_k, 4): predicted bounding box locations
-        predicted_masks (batch_size, top_k, 138, 138): predicted masks
+        predicted_masks (batch_size, top_k, mask_dim, mask_dim): predicted masks - mask dim default 512
         gt_labels (batch_size, k, 1): ground truth labels
         gt_locations (batch_size, k, 4): ground truth bounding box locations
-        gt_masks (batch_size, k, 138, 138): ground truth masks
+        gt_masks (batch_size, k, mask_dim, 138): ground truth masks - mask dim default 512
         num_objects (batch_size, 1): number of objects in each image
 
         The first num_objects[1] out of k are the ground truth. The rest are filled with zeros.
@@ -52,19 +52,23 @@ class MultiboxLoss(nn.Module):
             filtered_idx_gt = idx_gt[batch][idx_gt[batch] != -1]
 
             # Compute losses
-            cls_loss += self.cross_entropy(confidence[batch][filtered_idx_pred], gt_labels[batch][filtered_idx_gt])
+            cls_preds = confidence[batch][filtered_idx_pred].view(-1)
+            cls_gt = gt_labels[batch][filtered_idx_gt].view(-1).to(torch.float)
+            cls_loss += self.cross_entropy(cls_preds, cls_gt)
             dst_loss += self.smooth_l1(predicted_locations[batch][filtered_idx_pred], gt_locations[batch][filtered_idx_gt])
             
             # Mask loss uses pixel-wise cross entropy
-            mask_preds = predicted_masks[batch][filtered_idx_pred].view(-1, 1)      # (top_k*138*138, 1)
-            # mask_gt = gt_masks[batch][filtered_idx_gt].view(-1, 1)                  # (top_k*138*138, 1)
-            # mask_loss += self.cross_entropy(mask_preds, mask_gt)
+            mask_preds = predicted_masks[batch][filtered_idx_pred].view(-1)         # (top_k * mask_dim * mask_dim, 1)
+            mask_gt = gt_masks[batch][filtered_idx_gt].view(-1).to(torch.float)     # (top_k * mask_dim * mask_dim, 1)
+            mask_loss += self.cross_entropy(mask_preds, mask_gt)
 
-        # Normalize losses
+        # Mean over batch
         cls_loss /= confidence.shape[0]
         dst_loss /= confidence.shape[0]
-        # mask_loss /= confidence.shape[0]
+        mask_loss /= confidence.shape[0]
 
+        # Mean per pixel
+        mask_loss /= num_objects.sum() * gt_masks.shape[-1] * gt_masks.shape[-2]
         loss = self.cls_coef * cls_loss + self.dst_coef * dst_loss + self.mask_coef * mask_loss
         return loss
 

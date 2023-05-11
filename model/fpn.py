@@ -21,16 +21,16 @@ class FPN(nn.Module):
     def forward(self, inputs: list) -> list:
         # inputs: [C3, C4, C5]
 
-        # C5: [N, 512, 18, 18]
-        # C4: [N, 256, 35, 35]
-        # C3: [N, 128, 69, 69]
+        # C5: [N, 512, 16, 16]
+        # C4: [N, 256, 32, 32]
+        # C3: [N, 128, 64, 64]
 
-        # P5: [N, 256, 18, 18]
-        # P4: [N, 256, 35, 35]
-        # P3: [N, 256, 69, 69]
+        # P5: [N, 256, 16, 16]
+        # P4: [N, 256, 32, 32]
+        # P3: [N, 256, 64, 64]
 
-        # P6: [N, 256, 9, 9]
-        # P7: [N, 256, 5, 5]
+        # P6: [N, 256, 8, 8]
+        # P7: [N, 256, 4, 4]
 
         out = list()
         batch_size = inputs[0].shape[0]
@@ -52,9 +52,9 @@ class FPN(nn.Module):
 # Test FPN module
 
 def test_network_and_shapes():
-    x = torch.randn((2, 128, 69, 69))
-    y = torch.randn((2, 256, 35, 35))
-    z = torch.randn((2, 512, 18, 18))
+    x = torch.randn((2, 128, 64, 64))
+    y = torch.randn((2, 256, 32, 32))
+    z = torch.randn((2, 512, 16, 16))
 
     fpn = FPN()
     out = fpn([x,y,z])
@@ -63,19 +63,19 @@ def test_network_and_shapes():
     assert len(out) == 5
 
     print(f'Shape of P3: {out[0].shape}')
-    assert out[0].shape == (2, 256, 69, 69)
+    assert out[0].shape == (2, 256, 64, 64)
 
     print(f'Shape of P4: {out[1].shape}')
-    assert out[1].shape == (2, 256, 35, 35)
+    assert out[1].shape == (2, 256, 32, 32)
 
     print(f'Shape of P5: {out[2].shape}')
-    assert out[2].shape == (2, 256, 18, 18)
+    assert out[2].shape == (2, 256, 16, 16)
 
     print(f'Shape of P6: {out[3].shape}')
-    assert out[3].shape == (2, 256, 9, 9)
+    assert out[3].shape == (2, 256, 8, 8)
 
     print(f'Shape of P7: {out[4].shape}')
-    assert out[4].shape == (2, 256, 5, 5)
+    assert out[4].shape == (2, 256, 4, 4)
 
     print('Test passed')
 

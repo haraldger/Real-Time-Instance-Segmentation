@@ -1,3 +1,5 @@
+import argparse
+from math import ceil
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -132,7 +134,7 @@ def custom_collate(batch):
 
 
 
-def train():
+def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum=0.9, weight_decay=0.0005):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     train_data_dir = "data/coco_holds_resized"
@@ -149,24 +151,24 @@ def train():
     train_dataset = CocoDetection(root=train_data_dir, annFile=train_annotations)
     val_dataset = CocoDetection(root=val_data_dir, annFile=val_annotations)
 
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=1, collate_fn=custom_collate)
-    val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False, num_workers=1, collate_fn=custom_collate)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, collate_fn=custom_collate)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2, collate_fn=custom_collate)
     
 
     yolact = Yolact().to(device)
     criterion = MultiboxLoss().to(device)
-    optimizer = optim.SGD(yolact.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005)
+    optimizer = optim.SGD(yolact.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
 
-    num_epochs = 2
     print("Starting Training")
+    losses = []
     for epoch in range(num_epochs):
         print(f"Epoch {epoch + 1}/{num_epochs}")
         yolact.train()
         running_loss = 0.0
         for i, (images, targets, gt_masks) in enumerate(train_loader):
             images = images.to(device)
-            gt_labels, gt_locations, num_objects = transform_targets(targets, 2, 100, 138)
-
+            gt_labels, gt_locations, num_objects = transform_targets(targets, batch_size=batch_size, k=k, mask_size=mask_size)
+            
             optimizer.zero_grad()
 
             bboxes, classes, masks, columns_to_keep = yolact(images)
@@ -176,11 +178,47 @@ def train():
             optimizer.step()
 
             running_loss += loss.item()
-            if i % 10 == 9:
-                print(f"[{epoch + 1}, {i + 1}] loss: {running_loss / 10:.4f}")
-                running_loss = 0.0
+        
+        print(f"Training loss: {running_loss / len(train_loader):.4f}")
+        losses.append(running_loss)
+
+        if epoch % 10 == 9:
+            yolact.eval()
+            validation_loss = 0.0
+            with torch.no_grad():
+                for i, (images, targets, gt_masks) in enumerate(val_loader):
+                    images = images.to(device)
+                    gt_labels, gt_locations, num_objects = transform_targets(targets, 2, 100, 138)
+
+                    bboxes, classes, masks, columns_to_keep = yolact(images)
+                    loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, num_objects)
+
+                    validation_loss += loss.item()
+
+            print(f"Validation loss: {validation_loss / len(val_loader):.4f}")
+
+        if epoch % 10 == 9:
+            torch.save(yolact.state_dict(), f"model/yolact_{epoch + 1}.pth")
+                    
 
     print("Finished Training")
 
+
+def main():
+    parser = argparse.ArgumentParser(description='Train Yolact')
+    parser.add_argument('-n', '--num_epochs', type=int, default=100, help='Number of epochs to train')
+    parser.add_argument('-b', '--batch_size', type=int, default=4, help='Batch size')
+    parser.add_argument('-k', '--k', type=int, default=100, help='Number of objects to detect')
+    parser.add_argument('-ms', '--mask_size', type=int, default=138, help='Size of mask')
+    parser.add_argument('-lr', '--learning_rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('-m', '--momentum', type=float, default=0.9, help='Momentum')
+    parser.add_argument('-wd', '--weight_decay', type=float, default=0.0005, help='Weight decay')
+    args = parser.parse_args()
+
+    train(num_epochs=args.num_epochs, batch_size=args.batch_size, 
+          k=args.k, mask_size=args.mask_size, 
+          lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
+
+
 if __name__ == "__main__":
-    train()
+    main()

@@ -60,11 +60,11 @@ class PredictionHeads(nn.Module):
 def test_network_and_outputs():
     print("Testing PredictionHeads module...")
 
-    p3 = torch.randn((2, 256, 69, 69))
-    p4 = torch.randn((2, 256, 35, 35))
-    p5 = torch.randn((2, 256, 18, 18))
-    p6 = torch.randn((2, 256, 9, 9))
-    p7 = torch.randn((2, 256, 5, 5))
+    p3 = torch.randn((2, 256, 64, 64))
+    p4 = torch.randn((2, 256, 32, 32))
+    p5 = torch.randn((2, 256, 16, 16))
+    p6 = torch.randn((2, 256, 8, 8))
+    p7 = torch.randn((2, 256, 4, 4))
     x = [p3, p4, p5, p6, p7]
 
     model = PredictionHeads(256)
@@ -82,11 +82,11 @@ def test_network_and_outputs():
 def test_output_shapes():
     print("Testing output shapes of PredictionHeads module...")
 
-    p3 = torch.randn((2, 256, 69, 69))
-    p4 = torch.randn((2, 256, 35, 35))
-    p5 = torch.randn((2, 256, 18, 18))
-    p6 = torch.randn((2, 256, 9, 9))
-    p7 = torch.randn((2, 256, 5, 5))
+    p3 = torch.randn((2, 256, 64, 64))
+    p4 = torch.randn((2, 256, 32, 32))
+    p5 = torch.randn((2, 256, 16, 16))
+    p6 = torch.randn((2, 256, 8, 8))
+    p7 = torch.randn((2, 256, 4, 4))
     x = [p3, p4, p5, p6, p7]
 
     model = PredictionHeads(256)
@@ -94,11 +94,11 @@ def test_output_shapes():
 
     for i in range(len(cls)):
         print(f"cls[{i}].shape: {cls[i].shape}")
-        assert cls[i].shape == (2, 3, ceil(69/(2**i)), ceil(69/(2**i)))
+        assert cls[i].shape == (2, 3, ceil(64/(2**i)), ceil(64/(2**i)))
         print(f"bbox[{i}].shape: {bbox[i].shape}")
-        assert bbox[i].shape == (2, 3*4, ceil(69/(2**i)), ceil(69/(2**i)))
+        assert bbox[i].shape == (2, 3*4, ceil(64/(2**i)), ceil(64/(2**i)))
         print(f"mask_coefficients[{i}].shape: {mask_coefficients[i].shape}")
-        assert mask_coefficients[i].shape == (2, 3*32, ceil(69/(2**i)), ceil(69/(2**i)))
+        assert mask_coefficients[i].shape == (2, 3*32, ceil(64/(2**i)), ceil(64/(2**i)))
 
     print("Test passed!")
     print()
