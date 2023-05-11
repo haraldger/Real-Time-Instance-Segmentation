@@ -182,6 +182,7 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
             optimizer.step()
 
             running_loss += loss.item()
+            del images, gt_labels, gt_locations, gt_masks, bboxes, classes, masks, columns_to_keep
         
         print(f"Training loss: {running_loss / len(train_loader):.4f}")
         losses.append(running_loss)
@@ -198,6 +199,8 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
                     loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, num_objects)
 
                     validation_loss += loss.item()
+
+                    del images, gt_labels, gt_locations, gt_masks, bboxes, classes, masks, columns_to_keep
 
             print(f"Validation loss: {validation_loss / len(val_loader):.4f}")
 
