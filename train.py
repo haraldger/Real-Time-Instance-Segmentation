@@ -218,9 +218,6 @@ def train(model, num_epochs=100, batch_size=4, k=100, mask_size=512, lr=0.001, m
 
     print("Finished Training")
 
-def evaluate(model):
-    pass
-
 
 def main():
     parser = argparse.ArgumentParser(description='Train Yolact')
