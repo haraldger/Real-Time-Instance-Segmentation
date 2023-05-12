@@ -14,7 +14,10 @@ import torch
 from pycocotools import mask as coco_mask
 from typing import Any, Callable, List, Optional, Tuple
 from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import os
+import cv2
 
 class CocoDetection(VisionDataset):
     """`MS Coco Detection <https://cocodataset.org/#detection-2016>`_ Dataset.
@@ -219,7 +222,63 @@ def train(model, num_epochs=100, batch_size=4, k=100, mask_size=512, lr=0.001, m
     print("Finished Training")
 
 def evaluate(model):
-    pass
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Evaluating on {device}")
+
+    train_data_dir = "data/coco_holds_resized"
+    train_annotations = "data/coco_holds_resized/annotations.json"
+    val_data_dir = "data/coco_holds_resized"
+    val_annotations = "data/coco_holds_resized/annotations.json"
+
+    val_dataset = CocoDetection(root=val_data_dir, annFile=val_annotations)
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=2, collate_fn=custom_collate)
+
+    model = model.to(device)
+    model.eval()
+
+    full_images = []
+    predicted_masks = []
+    predicted_bboxes = []
+    predicted_classes = []
+
+    with torch.no_grad():
+        for i, (images, _, _) in enumerate(val_loader):
+            images = images.to(device)
+            full_images.append(images)
+            
+            bboxes, classes, masks, columns_to_keep = model.evaluate(images)
+
+            predicted_bboxes.append(bboxes)
+            predicted_classes.append(classes)
+            predicted_masks.append(masks)
+
+            del images, bboxes, classes, masks, columns_to_keep
+
+    # TODO: Draw masks and bboxes on images
+    fig, ax = plt.subplots(1)
+    ax.imshow(full_images[0])
+
+    # Plot each predicted mask
+    for mask in predicted_masks:
+        # Create a binary image from the mask
+        binary_mask = mask.squeeze() > 0.96  # Adjust the threshold as needed
+        
+        # Create a patch for the mask
+        binary_mask = binary_mask.astype(np.uint8)
+
+        contours, _ = cv2.findContours(binary_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
+        # Plot each contour as a polygon
+        for contour in contours:
+            polygon_patch = patches.Polygon(contour.reshape(-1, 2), edgecolor='red', facecolor='none')
+            ax.add_patch(polygon_patch)
+
+    # Show the plot
+    plt.show()
+
+
+    
+        
 
 
 def main():

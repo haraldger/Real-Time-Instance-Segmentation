@@ -82,7 +82,9 @@ class Yolact(nn.Module):
             for j in range(len(bboxes[i])):
                 bbox = bboxes[i][j]
                 mask = masks[i][j]
-                cropped_masks[i].append(mask[bbox[1]:bbox[3], bbox[0]:bbox[2]])
+                cropped_mask = torch.zeros(mask.shape)
+                cropped_mask[bbox[1]:bbox[3], bbox[0]:bbox[2]] = mask[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+                cropped_masks[i].append(cropped_mask)
 
         return bboxes, classes, cropped_masks, columns_to_keep
 
