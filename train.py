@@ -286,7 +286,7 @@ def main():
     parser.add_argument('-n', '--num_epochs', type=int, default=100, help='Number of epochs to train')
     parser.add_argument('-b', '--batch_size', type=int, default=4, help='Batch size')
     parser.add_argument('-k', '--k', type=int, default=100, help='Number of objects to detect')
-    parser.add_argument('-ms', '--mask_size', type=int, default=138, help='Size of mask')
+    parser.add_argument('-ms', '--mask_size', type=int, default=512, help='Size of mask')
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.001, help='Learning rate')
     parser.add_argument('-m', '--momentum', type=float, default=0.9, help='Momentum')
     parser.add_argument('-wd', '--weight_decay', type=float, default=0.0005, help='Weight decay')
