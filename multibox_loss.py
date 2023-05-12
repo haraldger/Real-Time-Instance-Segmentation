@@ -23,7 +23,7 @@ class MultiboxLoss(nn.Module):
         self.smooth_l1 = nn.SmoothL1Loss(reduction='sum')
         self.cross_entropy = nn.CrossEntropyLoss(reduction='sum')
 
-    def forward(self, confidence, predicted_locations, predicted_masks, gt_labels, gt_locations, gt_masks, num_objects):
+    def forward(self, confidence, predicted_locations, predicted_masks, gt_labels, gt_locations, gt_masks, detections_to_keep, num_objects):
         """
         confidence (batch_size, top_k, 1): class predictions
         predicted_locations (batch_size, top_k, 4): predicted bounding box locations
@@ -31,13 +31,14 @@ class MultiboxLoss(nn.Module):
         gt_labels (batch_size, k, 1): ground truth labels
         gt_locations (batch_size, k, 4): ground truth bounding box locations
         gt_masks (batch_size, k, mask_dim, 138): ground truth masks - mask dim default 512
+        detections_to_keep (batch_size, k): tensor of 0s and 1s, where 1 indicates that the detection survived NMS
         num_objects (batch_size, 1): number of objects in each image
 
         The first num_objects[1] out of k are the ground truth. The rest are filled with zeros.
         """
         
         # Match predictions with ground truth
-        idx_pred, idx_gt = self.match_predictions(confidence, predicted_locations, gt_labels, gt_locations, num_objects)
+        idx_pred, idx_gt = self.match_predictions(confidence, predicted_locations, gt_labels, gt_locations, detections_to_keep, num_objects)
         
         # Move to GPU
         idx_pred = idx_pred.to(self.device)
@@ -53,7 +54,7 @@ class MultiboxLoss(nn.Module):
 
             # Compute losses
             cls_preds = confidence[batch][filtered_idx_pred].view(-1)
-            cls_gt = gt_labels[batch][filtered_idx_gt].view(-1).to(torch.float)
+            cls_gt = gt_labels[batch][filtered_idx_gt].view(-1).to(dtype=torch.float)
             cls_loss += self.cross_entropy(cls_preds, cls_gt)
             dst_loss += self.smooth_l1(predicted_locations[batch][filtered_idx_pred], gt_locations[batch][filtered_idx_gt])
             
@@ -74,12 +75,14 @@ class MultiboxLoss(nn.Module):
 
 
         
-    def match_predictions(self, cls_preds, bbox_preds, gt_labels, gt_bboxes, num_objects):
+    def match_predictions(self, cls_preds, bbox_preds, gt_labels, gt_bboxes, detections_to_keep, num_objects):
         """
         cls_preds (batch_size, top_k, 1): class predictions
         bbox_preds (batch_size, top_k, 4): predicted bounding box locations
         gt_labels (batch_size, k, 1): ground truth labels
         gt_bboxes (batch_size, k, 4): ground truth bounding box locations
+        detections_to_keep (batch_size, k): masked
+        num_objects (batch_size, 1): number of objects in each image
         """
 
         # Move to CPU
@@ -87,6 +90,7 @@ class MultiboxLoss(nn.Module):
         bbox_preds = bbox_preds.detach().cpu()
         gt_bboxes = gt_bboxes.detach().cpu()
         gt_labels = gt_labels.detach().cpu()
+        detections_to_keep = detections_to_keep.detach().cpu()
         num_objects = num_objects.detach().cpu()
 
         idx_preds = torch.full((cls_preds.shape[0], cls_preds.shape[1]), fill_value=-1)
@@ -98,6 +102,11 @@ class MultiboxLoss(nn.Module):
             bbox_preds_batch = bbox_preds[batch].flatten(start_dim=0, end_dim=-2)   # (top_k, 4)
             gt_bboxes_batch = gt_bboxes[batch].flatten(start_dim=0, end_dim=-2)     # (top_k, 4)
             
+            # Filter out detections that did not survive NMS
+            cls_preds_batch = cls_preds_batch[detections_to_keep[batch] == 1]          # Remove zeros -> (detections_to_keep)
+            bbox_preds_batch = bbox_preds_batch[detections_to_keep[batch] ==  1]        # Remove zeros -> (detections_to_keep, 4)
+
+            # Filter out padded zeros
             gt_labels_batch = gt_labels_batch[:num_objects[batch]]                 # Remove zeros -> (num_objects)
             gt_bboxes_batch = gt_bboxes_batch[:num_objects[batch]]                 # Remove zeros -> (num_objects, 4)
 
@@ -108,7 +117,7 @@ class MultiboxLoss(nn.Module):
             # Hungarian algorithm
             cost = self.cls_coef * cls_cost + self.dst_coef * dst_cost
             idx_gt, idx_pred = linear_sum_assignment(cost)      # ndarray
-            
+
             # Add batch dimension
             idx_pred = torch.tensor(idx_pred)
             idx_gt = torch.tensor(idx_gt)
@@ -173,15 +182,17 @@ def setup_data():
     gt_masks = torch.rand((2, 5, 138, 138)).to(device)
     gt_masks[0, 3:, :, :] = 0
 
+    detections_to_keep = torch.tensor([[1, 1, 1, 1, 1],
+                                        [1, 1, 1, 1, 1]]).to(device)
     num_objects = torch.tensor([[3], [2]]).to(device)
 
-    return pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects
+    return pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, detections_to_keep, num_objects
 
 def test_loss_forward():
     print("Running MultiboxLoss forward test...")
-    pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects = setup_data()
+    pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, detections_to_keep, num_objects = setup_data()
     loss = MultiboxLoss()
-    loss_value = loss(pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, num_objects)
+    loss_value = loss(pred_cls, pred_bbox, pred_mask, gt_label, gt_bbox, gt_masks, detections_to_keep, num_objects)
     print(loss_value)
     print()
 

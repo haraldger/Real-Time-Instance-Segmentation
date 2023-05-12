@@ -132,10 +132,13 @@ def custom_collate(batch):
 
     return images, targets, masks
 
+def get_model():
+    model = Yolact()
+    return model
 
-
-def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum=0.9, weight_decay=0.0005):
+def train(model, num_epochs=100, batch_size=4, k=100, mask_size=512, lr=0.001, momentum=0.9, weight_decay=0.0005):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using {device}")
 
     train_data_dir = "data/coco_holds_resized"
     train_annotations = "data/coco_holds_resized/annotations.json"
@@ -155,53 +158,68 @@ def train(num_epochs=100, batch_size=4, k=100, mask_size=138, lr=0.001, momentum
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=2, collate_fn=custom_collate)
     
 
-    yolact = Yolact().to(device)
+    model = model.to(device)
     criterion = MultiboxLoss().to(device)
-    optimizer = optim.SGD(yolact.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
 
     print("Starting Training")
     losses = []
     for epoch in range(num_epochs):
         print(f"Epoch {epoch + 1}/{num_epochs}")
-        yolact.train()
+        model.train()
         running_loss = 0.0
         for i, (images, targets, gt_masks) in enumerate(train_loader):
             images = images.to(device)
-            gt_labels, gt_locations, num_objects = transform_targets(targets, batch_size=batch_size, k=k, mask_size=mask_size)
             
+            gt_labels, gt_locations, num_objects = transform_targets(targets, batch_size=batch_size, k=k, mask_size=mask_size)
+            gt_labels = gt_labels.to(device)
+            gt_locations = gt_locations.to(device)
+            gt_masks = gt_masks.to(device)
+
             optimizer.zero_grad()
 
-            bboxes, classes, masks, columns_to_keep = yolact(images)
+            bboxes, classes, masks, columns_to_keep = model(images)
+            # columns_to_keep is a tensor of shape (batch_size, num_bboxes), where 1 indicates that the column should be kept
 
-            loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, num_objects)
+            loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, columns_to_keep, num_objects)
             loss.backward()
             optimizer.step()
 
             running_loss += loss.item()
+            del images, gt_labels, gt_locations, gt_masks, bboxes, classes, masks, columns_to_keep
         
         print(f"Training loss: {running_loss / len(train_loader):.4f}")
         losses.append(running_loss)
 
         if epoch % 10 == 9:
-            yolact.eval()
+            model.eval()
             validation_loss = 0.0
             with torch.no_grad():
                 for i, (images, targets, gt_masks) in enumerate(val_loader):
                     images = images.to(device)
-                    gt_labels, gt_locations, num_objects = transform_targets(targets, 2, 100, 138)
-
-                    bboxes, classes, masks, columns_to_keep = yolact(images)
-                    loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, num_objects)
+                    gt_labels, gt_locations, num_objects = transform_targets(targets, batch_size=batch_size, k=k, mask_size=mask_size)
+                    gt_labels = gt_labels.to(device)
+                    gt_locations = gt_locations.to(device)
+                    gt_masks = gt_masks.to(device)
+                    
+                    bboxes, classes, masks, columns_to_keep = model(images)
+                    loss = criterion(classes, bboxes, masks, gt_labels, gt_locations, gt_masks, columns_to_keep, num_objects)
 
                     validation_loss += loss.item()
+
+                    del images, gt_labels, gt_locations, gt_masks, bboxes, classes, masks, columns_to_keep
+                    
 
             print(f"Validation loss: {validation_loss / len(val_loader):.4f}")
 
         if epoch % 10 == 9:
-            torch.save(yolact.state_dict(), f"model/yolact_{epoch + 1}.pth")
+            torch.save(model.state_dict(), f"model/model_{epoch + 1}.pth")
                     
 
     print("Finished Training")
+
+def evaluate(model):
+    pass
 
 
 def main():
@@ -215,7 +233,9 @@ def main():
     parser.add_argument('-wd', '--weight_decay', type=float, default=0.0005, help='Weight decay')
     args = parser.parse_args()
 
-    train(num_epochs=args.num_epochs, batch_size=args.batch_size, 
+    yolact = get_model()
+
+    train(yolact, num_epochs=args.num_epochs, batch_size=args.batch_size, 
           k=args.k, mask_size=args.mask_size, 
           lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
 
